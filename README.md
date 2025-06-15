@@ -131,7 +131,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - All contributors and users
 
 ## 📞 Support
-For support, please open an issue in the repository or contact the maintainers.
+For support, please open an issue in the repository or contact the maintainers. 
 
 ---
 
