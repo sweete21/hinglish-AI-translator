@@ -94,8 +94,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
+const promptCache={};
+
 // Function to get translation prompt based on style and level
 function getTranslationPrompt(style, level) {
+   
+
    const structureInstruction = `
   Keep the original structure, including:
 - Bullet points
@@ -134,7 +138,8 @@ Only respond with the translated text — no comments or explanations.
     }
   };
 
-  return prompts[style][level] || prompts.hinglish.balanced;
+   return       basePrompt=prompts[style]?.[level] || prompts.hinglish.balanced;
+ 
 }
 
 // Function to translate text using Groq API
@@ -147,7 +152,13 @@ async function translateText(text) {
 
   const style = translationSettings?.style || 'hinglish';
   const level = translationSettings?.level || 'balanced';
-  const prompt = getTranslationPrompt(style, level);
+  const baseprompt = getTranslationPrompt(style, level);
+
+    const prompt = `
+${basePrompt}
+
+If multiple sentences are provided separated by "--SPLIT--", translate each one individually in the same order. Separate translations using "---SPLIT---".
+  `.trim()
 
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -188,59 +199,6 @@ async function translateText(text) {
     throw error;
   }
 }
-
-
-// Function to translate text using Groq API
-// async function translateText(text) {
-//   const { groqApiKey, translationSettings } = await chrome.storage.local.get(['groqApiKey', 'translationSettings']);
-  
-//   if (!groqApiKey) {
-//     throw new Error("Please configure your API key first");
-//   }
-
-//   const style = translationSettings?.style || 'hinglish';
-//   const level = translationSettings?.level || 'balanced';
-//   const prompt = getTranslationPrompt(style, level);
-
-//   try {
-//     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//         'Authorization': `Bearer ${groqApiKey}`
-//       },
-//       body: JSON.stringify({
-//         messages: [{
-//           role: "system",
-//           content: prompt
-//         }, {
-//           role: "user",
-//           content: text
-//         }],
-//         model: "meta-llama/llama-4-scout-17b-16e-instruct",
-//         temperature: 0.7,
-//         max_tokens: 1000
-//       })
-//     });
-    
-//     if (!response.ok) {
-//       const errorData = await response.json().catch(() => ({}));
-//       throw new Error(errorData.error?.message || `API error: ${response.status}`);
-//     }
-    
-//     const data = await response.json();
-//     const translatedText = data.choices[0].message.content.trim();
-    
-//     if (!translatedText) {
-//       throw new Error("Empty translation received");
-//     }
-    
-//     return translatedText;
-//   } catch (error) {
-//     console.error("Translation error:", error);
-//     throw error;
-//   }
-// }
 
 // Function to explain text using Groq API
 async function explainText(text) {
@@ -352,220 +310,220 @@ function showLoadingPopup() {
   document.body.appendChild(popup);
 }
 
-// // Function to show translation popup
-// function showTranslationPopup(originalText, translatedText) {
-//   // Remove loading popup if it exists
-//   const loadingPopup = document.getElementById('translationLoadingPopup');
-//   if (loadingPopup) {
-//     document.body.removeChild(loadingPopup);
-//   }
+// Function to show translation popup
+function showTranslationPopup(originalText, translatedText) {
+  // Remove loading popup if it exists
+  const loadingPopup = document.getElementById('translationLoadingPopup');
+  if (loadingPopup) {
+    document.body.removeChild(loadingPopup);
+  }
 
-//   // Remove existing popup if any
-//   const oldPopup = document.querySelector('.hinglish-popup');
-//   if (oldPopup) {
-//     document.body.removeChild(oldPopup);
-//   }
+  // Remove existing popup if any
+  const oldPopup = document.querySelector('.hinglish-popup');
+  if (oldPopup) {
+    document.body.removeChild(oldPopup);
+  }
 
-//   // Create popup container
-//   const popup = document.createElement('div');
-//   popup.className = 'hinglish-popup';
-//   popup.style.position = 'fixed';
-//   popup.style.zIndex = '9999';
-//   popup.style.borderRadius = '8px';
-//   popup.style.padding = '20px';
-//   popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-//   popup.style.maxWidth = '400px';
-//   popup.style.fontFamily = 'Arial, sans-serif';
-//   popup.style.fontSize = '14px';
-//   popup.style.top = '50%';
-//   popup.style.left = '50%';
-//   popup.style.transform = 'translate(-50%, -50%)';
+  // Create popup container
+  const popup = document.createElement('div');
+  popup.className = 'hinglish-popup';
+  popup.style.position = 'fixed';
+  popup.style.zIndex = '9999';
+  popup.style.borderRadius = '8px';
+  popup.style.padding = '20px';
+  popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+  popup.style.maxWidth = '400px';
+  popup.style.fontFamily = 'Arial, sans-serif';
+  popup.style.fontSize = '14px';
+  popup.style.top = '50%';
+  popup.style.left = '50%';
+  popup.style.transform = 'translate(-50%, -50%)';
 
-//   const isDarkMode = window.matchMedia &&
-//                      window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDarkMode = window.matchMedia &&
+                     window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-//   popup.style.backgroundColor = isDarkMode ? '#2d2d2d' : '#ffffff';
-//   popup.style.color = isDarkMode ? '#ffffff' : '#333333';
-//   popup.style.border = isDarkMode ? '1px solid #444' : '1px solid #ddd';
+  popup.style.backgroundColor = isDarkMode ? '#2d2d2d' : '#ffffff';
+  popup.style.color = isDarkMode ? '#ffffff' : '#333333';
+  popup.style.border = isDarkMode ? '1px solid #444' : '1px solid #ddd';
 
-//   // === Content container
-//   const content = document.createElement('div');
+  // === Content container
+  const content = document.createElement('div');
 
-//   const originalLabel = document.createElement('div');
-//   originalLabel.style.fontWeight = 'bold';
-//   originalLabel.style.marginBottom = '8px';
-//   originalLabel.style.color = isDarkMode ? '#aaa' : '#666';
-//   originalLabel.textContent = 'Original Text:';
+  const originalLabel = document.createElement('div');
+  originalLabel.style.fontWeight = 'bold';
+  originalLabel.style.marginBottom = '8px';
+  originalLabel.style.color = isDarkMode ? '#aaa' : '#666';
+  originalLabel.textContent = 'Original Text:';
 
-//   const originalBox = document.createElement('div');
-//   originalBox.style.background = isDarkMode ? '#3a3a3a' : '#f5f5f5';
-//   originalBox.style.padding = '12px';
-//   originalBox.style.borderRadius = '6px';
-//   originalBox.style.marginBottom = '15px';
-//   originalBox.style.lineHeight = '1.5';
-//   originalBox.style.whiteSpace = 'pre-wrap';
-//   originalBox.textContent = originalText;
+  const originalBox = document.createElement('div');
+  originalBox.style.background = isDarkMode ? '#3a3a3a' : '#f5f5f5';
+  originalBox.style.padding = '12px';
+  originalBox.style.borderRadius = '6px';
+  originalBox.style.marginBottom = '15px';
+  originalBox.style.lineHeight = '1.5';
+  originalBox.style.whiteSpace = 'pre-wrap';
+  originalBox.textContent = originalText;
 
-//   const translatedLabel = document.createElement('div');
-//   translatedLabel.style.fontWeight = 'bold';
-//   translatedLabel.style.marginBottom = '8px';
-//   translatedLabel.style.color = isDarkMode ? '#aaa' : '#666';
-//   translatedLabel.textContent = 'Translation:';
+  const translatedLabel = document.createElement('div');
+  translatedLabel.style.fontWeight = 'bold';
+  translatedLabel.style.marginBottom = '8px';
+  translatedLabel.style.color = isDarkMode ? '#aaa' : '#666';
+  translatedLabel.textContent = 'Translation:';
 
-//   const translatedBox = document.createElement('div');
-//   translatedBox.style.background = isDarkMode ? '#1a3d6d' : '#e8f0fe';
-//   translatedBox.style.padding = '12px';
-//   translatedBox.style.borderRadius = '6px';
-//   translatedBox.style.marginBottom = '15px';
-//   translatedBox.style.lineHeight = '1.5';
-//   translatedBox.style.whiteSpace = 'pre-wrap';
-//   translatedBox.textContent = translatedText;
+  const translatedBox = document.createElement('div');
+  translatedBox.style.background = isDarkMode ? '#1a3d6d' : '#e8f0fe';
+  translatedBox.style.padding = '12px';
+  translatedBox.style.borderRadius = '6px';
+  translatedBox.style.marginBottom = '15px';
+  translatedBox.style.lineHeight = '1.5';
+  translatedBox.style.whiteSpace = 'pre-wrap';
+  translatedBox.textContent = translatedText;
 
-//   // Append to content
-//   content.appendChild(originalLabel);
-//   content.appendChild(originalBox);
-//   content.appendChild(translatedLabel);
-//   content.appendChild(translatedBox);
+  // Append to content
+  content.appendChild(originalLabel);
+  content.appendChild(originalBox);
+  content.appendChild(translatedLabel);
+  content.appendChild(translatedBox);
 
-//   // === Close button
-//   const buttonWrapper = document.createElement('div');
-//   buttonWrapper.style.textAlign = 'right';
+  // === Close button
+  const buttonWrapper = document.createElement('div');
+  buttonWrapper.style.textAlign = 'right';
 
-//   const closeButton = document.createElement('button');
-//   closeButton.textContent = 'Close';
-//   closeButton.style.cursor = 'pointer';
-//   closeButton.style.padding = '8px 16px';
-//   closeButton.style.background = '#1a73e8';
-//   closeButton.style.color = 'white';
-//   closeButton.style.border = 'none';
-//   closeButton.style.borderRadius = '4px';
-//   closeButton.style.fontSize = '14px';
-//   closeButton.style.transition = 'background 0.2s';
+  const closeButton = document.createElement('button');
+  closeButton.textContent = 'Close';
+  closeButton.style.cursor = 'pointer';
+  closeButton.style.padding = '8px 16px';
+  closeButton.style.background = '#1a73e8';
+  closeButton.style.color = 'white';
+  closeButton.style.border = 'none';
+  closeButton.style.borderRadius = '4px';
+  closeButton.style.fontSize = '14px';
+  closeButton.style.transition = 'background 0.2s';
 
-//   closeButton.addEventListener('mouseenter', () => {
-//     closeButton.style.background = '#0d5bc1';
-//   });
-//   closeButton.addEventListener('mouseleave', () => {
-//     closeButton.style.background = '#1a73e8';
-//   });
-//   closeButton.addEventListener('click', () => {
-//     document.body.removeChild(popup);
-//   });
+  closeButton.addEventListener('mouseenter', () => {
+    closeButton.style.background = '#0d5bc1';
+  });
+  closeButton.addEventListener('mouseleave', () => {
+    closeButton.style.background = '#1a73e8';
+  });
+  closeButton.addEventListener('click', () => {
+    document.body.removeChild(popup);
+  });
 
-//   buttonWrapper.appendChild(closeButton);
+  buttonWrapper.appendChild(closeButton);
 
-//   // Final assembly
-//   popup.appendChild(content);
-//   popup.appendChild(buttonWrapper);
-//   document.body.appendChild(popup);
+  // Final assembly
+  popup.appendChild(content);
+  popup.appendChild(buttonWrapper);
+  document.body.appendChild(popup);
 
-//   // Optional: click outside to close
-//   document.addEventListener('click', function outsideClick(e) {
-//     if (!popup.contains(e.target)) {
-//       document.body.removeChild(popup);
-//       document.removeEventListener('click', outsideClick);
-//     }
-//   });
-// }
+  // Optional: click outside to close
+  document.addEventListener('click', function outsideClick(e) {
+    if (!popup.contains(e.target)) {
+      document.body.removeChild(popup);
+      document.removeEventListener('click', outsideClick);
+    }
+  });
+}
 
-// function showTranslationPopup(originalText, translatedText) {
-//   // Remove loading popup if it exists
-//   const loadingPopup = document.getElementById('translationLoadingPopup');
-//   if (loadingPopup) {
-//     document.body.removeChild(loadingPopup);
-//   }
+function showTranslationPopup(originalText, translatedText) {
+  // Remove loading popup if it exists
+  const loadingPopup = document.getElementById('translationLoadingPopup');
+  if (loadingPopup) {
+    document.body.removeChild(loadingPopup);
+  }
 
-//   const popup = document.createElement('div');
-//   popup.className = 'hinglish-popup';
-//   popup.style.position = 'fixed';
-//   popup.style.zIndex = '9999';
-//   popup.style.borderRadius = '8px';
-//   popup.style.padding = '20px';
-//   popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-//   popup.style.maxWidth = '400px';
-//   popup.style.fontFamily = 'Arial, sans-serif';
-//   popup.style.fontSize = '14px';
-//   popup.style.top = '50%';
-//   popup.style.left = '50%';
-//   popup.style.transform = 'translate(-50%, -50%)';
+  const popup = document.createElement('div');
+  popup.className = 'hinglish-popup';
+  popup.style.position = 'fixed';
+  popup.style.zIndex = '9999';
+  popup.style.borderRadius = '8px';
+  popup.style.padding = '20px';
+  popup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+  popup.style.maxWidth = '400px';
+  popup.style.fontFamily = 'Arial, sans-serif';
+  popup.style.fontSize = '14px';
+  popup.style.top = '50%';
+  popup.style.left = '50%';
+  popup.style.transform = 'translate(-50%, -50%)';
   
-//   // Dark mode detection and styling
-//   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-//     popup.style.backgroundColor = '#2d2d2d';
-//     popup.style.color = '#ffffff';
-//     popup.style.border = '1px solid #444';
+  // Dark mode detection and styling
+  if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    popup.style.backgroundColor = '#2d2d2d';
+    popup.style.color = '#ffffff';
+    popup.style.border = '1px solid #444';
     
-//     popup.innerHTML = `
-//       <div style="margin-bottom: 15px;">
-//         <div style="font-weight: bold; margin-bottom: 8px; color: #aaa;">Original Text:</div>
-//         <div style="background: #3a3a3a; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${originalText}</div>
-//         <div style="font-weight: bold; margin-bottom: 8px; color: #aaa;">Translation:</div>
-//         <div style="background: #1a3d6d; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${translatedText}</div>
-//       </div>
-//       <div style="text-align: right;">
-//         <button id="closePopup" style="
-//           cursor: pointer;
-//           padding: 8px 16px;
-//           background: #1a73e8;
-//           color: white;
-//           border: none;
-//           border-radius: 4px;
-//           font-size: 14px;
-//           transition: background 0.2s;
-//         ">Close</button>
-//       </div>
-//     `;
-//   } else {
-//     popup.style.backgroundColor = '#ffffff';
-//     popup.style.color = '#333333';
-//     popup.style.border = '1px solid #ddd';
+    popup.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <div style="font-weight: bold; margin-bottom: 8px; color: #aaa;">Original Text:</div>
+        <div style="background: #3a3a3a; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${originalText}</div>
+        <div style="font-weight: bold; margin-bottom: 8px; color: #aaa;">Translation:</div>
+        <div style="background: #1a3d6d; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${translatedText}</div>
+      </div>
+      <div style="text-align: right;">
+        <button id="closePopup" style="
+          cursor: pointer;
+          padding: 8px 16px;
+          background: #1a73e8;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: background 0.2s;
+        ">Close</button>
+      </div>
+    `;
+  } else {
+    popup.style.backgroundColor = '#ffffff';
+    popup.style.color = '#333333';
+    popup.style.border = '1px solid #ddd';
     
-//     popup.innerHTML = `
-//       <div style="margin-bottom: 15px;">
-//         <div style="font-weight: bold; margin-bottom: 8px; color: #666;">Original Text:</div>
-//         <div style="background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${originalText}</div>
-//         <div style="font-weight: bold; margin-bottom: 8px; color: #666;">Translation:</div>
-//         <div style="background: #e8f0fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${translatedText}</div>
-//       </div>
-//       <div style="text-align: right;">
-//         <button id="closePopup" style="
-//           cursor: pointer;
-//           padding: 8px 16px;
-//           background: #1a73e8;
-//           color: white;
-//           border: none;
-//           border-radius: 4px;
-//           font-size: 14px;
-//           transition: background 0.2s;
-//         ">Close</button>
-//       </div>
-//     `;
-//   }
+    popup.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <div style="font-weight: bold; margin-bottom: 8px; color: #666;">Original Text:</div>
+        <div style="background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${originalText}</div>
+        <div style="font-weight: bold; margin-bottom: 8px; color: #666;">Translation:</div>
+        <div style="background: #e8f0fe; padding: 12px; border-radius: 6px; margin-bottom: 15px; line-height: 1.5;">${translatedText}</div>
+      </div>
+      <div style="text-align: right;">
+        <button id="closePopup" style="
+          cursor: pointer;
+          padding: 8px 16px;
+          background: #1a73e8;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: background 0.2s;
+        ">Close</button>
+      </div>
+    `;
+  }
   
-//   document.body.appendChild(popup);
+  document.body.appendChild(popup);
   
-//   // Close button functionality
-//   const closeButton = popup.querySelector('#closePopup');
-//   closeButton.addEventListener('click', () => {
-//     document.body.removeChild(popup);
-//   });
+  // Close button functionality
+  const closeButton = popup.querySelector('#closePopup');
+  closeButton.addEventListener('click', () => {
+    document.body.removeChild(popup);
+  });
   
-//   // Hover effect for close button
-//   closeButton.addEventListener('mouseenter', () => {
-//     closeButton.style.background = '#0d5bc1';
-//   });
-//   closeButton.addEventListener('mouseleave', () => {
-//     closeButton.style.background = '#1a73e8';
-//   });
+  // Hover effect for close button
+  closeButton.addEventListener('mouseenter', () => {
+    closeButton.style.background = '#0d5bc1';
+  });
+  closeButton.addEventListener('mouseleave', () => {
+    closeButton.style.background = '#1a73e8';
+  });
   
-//   // Close when clicking outside
-//   document.addEventListener('click', function outsideClick(e) {
-//     if (!popup.contains(e.target)) {
-//       document.body.removeChild(popup);
-//       document.removeEventListener('click', outsideClick);
-//     }
-//   });
-// }
+  // Close when clicking outside
+  document.addEventListener('click', function outsideClick(e) {
+    if (!popup.contains(e.target)) {
+      document.body.removeChild(popup);
+      document.removeEventListener('click', outsideClick);
+    }
+  });
+}
 
 // Function to show explanation popup
 function showExplanationPopup(originalText, explanation) {
